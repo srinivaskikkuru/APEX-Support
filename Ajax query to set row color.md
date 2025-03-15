@@ -73,6 +73,3 @@ To apply this script in an **Interactive Report**, follow these steps:
 
 ## Conclusion
 By using **jQuery**, you can dynamically highlight rows in Oracle APEX Interactive Reports based on cell values. This technique improves **user experience and readability**.
-
-For any questions or improvements, feel free to contribute to this guide! 🚀
-
