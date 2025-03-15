@@ -1,3 +1,4 @@
+#CSS for resize of Dialog Box In Apex
 To handle the size of a dialog box in Oracle APEX using CSS, you can target the dialog element and adjust its width, height, and other styles as needed. Here’s how you can apply custom CSS to manage the size of a dialog box in Oracle APEX:
 
 ### 1. Targeting Dialog Box by ID or Class
