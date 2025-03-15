@@ -227,11 +227,3 @@ $("#save-button").click(function() {
 3. **Security**: Always implement server-side validation even if client-side validation exists
 4. **Accessibility**: Ensure error messages are accessible to screen readers
 5. **Consistency**: Use similar validation patterns throughout your application
-
-## Contributing
-
-Feel free to contribute additional validation examples or improvements by creating a pull request.
-
-## License
-
-This project is licensed under the MIT License - see the LICENSE file for details.
