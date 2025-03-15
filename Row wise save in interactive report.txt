@@ -1,0 +1,73 @@
+/* Formatted on 02/14/2019 19:28:15 (QP5 v5.139.911.3011) */
+DECLARE
+   l_checkbox_flag   VARCHAR2 (20);
+   l_counter         NUMBER := 0;
+   l_user_id         NUMBER := :F_USER_ID;
+   L_RET_STATUS      VARCHAR2 (20);
+   L_RET_MSG         VARCHAR2 (200);
+   l_error_msg       VARCHAR2 (2000) := NULL;
+   l_index1          NUMBER;
+
+   FUNCTION find_value (p_array wwv_flow_global.vc_arr2, p_value VARCHAR2)
+      RETURN NUMBER
+   IS
+      l_index2   NUMBER;
+   BEGIN
+      FOR j IN 1 .. p_array.COUNT
+      LOOP
+         IF (p_array (j) = p_value)
+         THEN
+            l_index2 := j;
+            EXIT;
+         END IF;
+      END LOOP;
+
+      RETURN l_index2;
+   END;
+BEGIN
+   FOR i IN 1 .. APEX_APPLICATION.G_F01.COUNT
+   LOOP
+      apps.debug_msg ('before if :' || i);
+
+      IF APEX_APPLICATION.g_f02 (i) IS NOT NULL
+      THEN
+         apps.
+         debug_msg (
+            'i=' || i || ' with value :' || APEX_APPLICATION.g_f02 (i));
+         l_index1 :=
+            find_value (APEX_APPLICATION.g_f01, APEX_APPLICATION.g_f02 (i));
+         apps.debug_msg ('l_index1=' || l_index1); -- ||' with gf02 value :'||APEX_APPLICATION.g_f02(l_index1)||','||APEX_APPLICATION.g_f04(l_index1))  ;
+         APPS.INTG_ENG_SAYDO_TRACK_PKG.
+         UPDATE_SAY_DO_MASTER_TRACKER (APEX_APPLICATION.g_f01 (l_index1),
+                                       APEX_APPLICATION.g_f04 (l_index1),
+                                       APEX_APPLICATION.g_f08 (l_index1),
+                                       L_USER_ID,
+                                       L_RET_STATUS,
+                                       L_RET_MSG);
+
+         l_counter := l_counter + 1;
+
+         IF L_RET_STATUS = 'E'
+         THEN
+            l_error_msg := l_error_msg || L_RET_MSG;
+         END IF;
+      END IF;
+   END LOOP;
+
+   IF l_counter < 1
+   THEN
+      apex_error.
+      add_error (p_message            => 'Please select a Accolade Number to update',
+                 p_display_location   => apex_error.c_inline_in_notification);
+   END IF;
+
+   IF l_error_msg IS NOT NULL
+   THEN
+      apex_error.
+      add_error (p_message            => l_error_msg,
+                 p_display_location   => apex_error.c_inline_in_notification);
+   ELSE
+      APEX_APPLICATION.G_PRINT_SUCCESS_MESSAGE :=
+         '<span >Records uploaded successfully !!</span></b>';
+   END IF;
+END;

@@ -1,0 +1,1195 @@
+/******************************************************
+Exporting into Excel sheet
+*******************************************************/
+FUNCTION export_report_excel (p_project_number       VARCHAR2,
+                                                p_previous_forecast    VARCHAR2) return blob
+as
+l_project_start_date date ;
+l_project_end_date date;
+l_total_prior_forecast varchar2(100):=null;
+l_total_current_forecast varchar2(100):=null;
+l_variance varchar2(100):=null;
+l_current_margin varchar2(100):=null;
+l_prior_margin varchar2(100):=null;
+l_current_month varchar2(50);
+l_font1 pls_integer;
+l_font2 pls_integer;
+l_font3 pls_integer;
+l_font4 pls_integer;
+l_fill pls_integer;
+l_excel blob;    
+l_datarow_init pls_integer := 0;
+l_datacol_init pls_integer := 0;
+l_datarow pls_integer := 0;
+l_datacol pls_integer := 0;
+l_border pls_integer;
+l_dynamic_row_counter number:=1; 
+l_dynamic_col_counter number:=3; 
+l_counter number;
+begin
+     --empty all just in case
+      INTG_APEX_FILE_XLSX_PKG.clear_workbook;
+      --new sheet in workbook
+      INTG_APEX_FILE_XLSX_PKG.new_sheet(p_sheetname => 'Production Plan');
+      
+      /*
+      -------------------------------------------------------------
+        STYLING
+      -------------------------------------------------------------
+      */
+      l_font1 := INTG_APEX_FILE_XLSX_PKG.get_font( p_name => 'Arial', p_fontsize => '14',p_bold=> true,p_underline=>true);
+      
+       l_font2 := INTG_APEX_FILE_XLSX_PKG.get_font( p_name => 'Arial', p_fontsize => '12');
+       
+        l_font3 := INTG_APEX_FILE_XLSX_PKG.get_font( p_name => 'Arial', p_fontsize => '10');
+      --borders
+      l_border := 
+       INTG_APEX_FILE_XLSX_PKG.get_border
+         ( p_top    => 'thick'
+         , p_bottom => 'thick'
+         , p_left   => 'thick'
+         , p_right  => 'thick'
+         );
+         
+      l_fill := INTG_APEX_FILE_XLSX_PKG.get_fill
+                 (p_patternType => 'solid', p_fgRGB => 'FF92D050');
+         
+    /* INTG_APEX_FILE_XLSX_PKG.set_column
+         ( p_col => 5
+         , p_borderId => l_border
+         , p_sheet => 1
+         );*/
+     INTG_APEX_FILE_XLSX_PKG.MERGECELLS(p_tl_col=>1,p_tl_row=>1,p_br_col=>30,p_br_row=>2 ,p_sheet=>1);       
+     
+            INTG_APEX_FILE_XLSX_PKG.freeze_rows
+         ( p_sheet => 1, p_nr_rows => 13);
+               
+    INTG_APEX_FILE_XLSX_PKG.cell
+         ( p_col => 1 , p_row => 1, p_sheet => 1, p_fontId => l_font1
+         , p_value => 'Current vs Prior Comparison');
+                  
+      /*
+      -------------------------------------------------------------
+        HEADERS DETAILS
+      -------------------------------------------------------------
+      */
+         INTG_APEX_FILE_XLSX_PKG.cell
+         ( p_col => 1 , p_row => 4, p_sheet => 1, p_fontId => l_font2
+         , p_value => 'Current PMEAC');
+          INTG_APEX_FILE_XLSX_PKG.cell
+         ( p_col => 1 , p_row => 5, p_sheet => 1, p_fontId => l_font2
+         , p_value => 'Current margin');
+          INTG_APEX_FILE_XLSX_PKG.cell
+         ( p_col => 1 , p_row =>6, p_sheet => 1, p_fontId => l_font2
+         , p_value => 'Prior Margin');
+          INTG_APEX_FILE_XLSX_PKG.cell
+         ( p_col => 1 , p_row => 7, p_sheet => 1, p_fontId => l_font2
+         , p_value => 'Project Start Date');
+          INTG_APEX_FILE_XLSX_PKG.cell
+         ( p_col => 1 , p_row => 8, p_sheet => 1, p_fontId => l_font2
+         , p_value => 'Project End Date');
+          INTG_APEX_FILE_XLSX_PKG.cell
+         ( p_col => 1 , p_row => 9, p_sheet => 1, p_fontId => l_font2
+         , p_value => 'Total Current PMEAC');
+          INTG_APEX_FILE_XLSX_PKG.cell
+         ( p_col => 1 , p_row => 10, p_sheet => 1, p_fontId => l_font2
+         , p_value => 'Total Prior PMEAC');
+          INTG_APEX_FILE_XLSX_PKG.cell
+         ( p_col => 1 , p_row => 11, p_sheet => 1, p_fontId => l_font2
+         , p_value => 'Variance');
+         
+         
+         INTG_APEX_FILE_XLSX_PKG.cell
+         ( p_col => 4 , p_row => 4, p_sheet => 1, p_fontId => l_font2
+         , p_value => ':');
+          INTG_APEX_FILE_XLSX_PKG.cell
+         ( p_col => 4 , p_row => 5, p_sheet => 1, p_fontId => l_font2
+         , p_value =>  ':');
+          INTG_APEX_FILE_XLSX_PKG.cell
+         ( p_col => 4 , p_row =>6, p_sheet => 1, p_fontId => l_font2
+         , p_value => ':');
+          INTG_APEX_FILE_XLSX_PKG.cell
+         ( p_col => 4 , p_row => 7, p_sheet => 1, p_fontId => l_font2
+         , p_value =>  ':');
+          INTG_APEX_FILE_XLSX_PKG.cell
+         ( p_col => 4 , p_row => 8, p_sheet => 1, p_fontId => l_font2
+         , p_value => ':');
+          INTG_APEX_FILE_XLSX_PKG.cell
+         ( p_col => 4 , p_row => 9, p_sheet => 1, p_fontId => l_font2
+         , p_value =>  ':');
+          INTG_APEX_FILE_XLSX_PKG.cell
+         ( p_col => 4 , p_row => 10, p_sheet => 1, p_fontId => l_font2
+         , p_value =>  ':');
+          INTG_APEX_FILE_XLSX_PKG.cell
+         ( p_col => 4 , p_row => 11, p_sheet => 1, p_fontId => l_font2
+         , p_value => ':');
+         
+         
+         begin
+           SELECT start_date,
+                   completion_date,
+                   prior_fc,
+                   current_fc,
+                   (current_fc - prior_fc) VARIANCE,
+                   current_margin,
+                   ROUND ( ( (rev_budget - current_fc) * 100 / rev_budget), 2)
+                      revenue_budget,
+                      apps.intg_common_appl_pkg.get_current_pa_period || ' Forecast' as current_month
+                into      
+                    l_project_start_date,
+                    l_project_end_date,
+                    l_total_prior_forecast,
+                    l_total_current_forecast,
+                    l_variance,
+                    l_current_margin,
+                    l_prior_margin,
+                    l_current_month      
+              FROM (SELECT start_date,
+                           completion_date,
+                           APPS.intg_pa_pfw_cur_vs_pri_fc_pkg.
+                           get_prior_total (ppa.project_id, p_previous_forecast)
+                              prior_fc,
+                           APPS.intg_pa_pfw_cur_vs_pri_fc_pkg.
+                           get_current_total (ppa.project_id)
+                              current_fc,
+                           APPS.intg_pa_pfw_cur_vs_pri_fc_pkg.
+                           get_current_margin (ppa.project_id)
+                              current_margin,
+                           APPS.intg_pa_pfw_cur_vs_pri_fc_pkg.
+                           get_rev_budget (ppa.project_id, p_previous_forecast)
+                              rev_budget
+                      FROM pa_projects_all ppa
+                     WHERE segment1 = p_project_number
+                           AND ppa.org_id = mo_global.get_current_org_id);
+         exception when others then 
+            null;
+         end;
+         INTG_APEX_FILE_XLSX_PKG.cell
+         ( p_col => 5 , p_row => 4, p_sheet => 1, p_fontId => l_font2
+         , p_value =>l_current_month);
+          INTG_APEX_FILE_XLSX_PKG.cell
+         ( p_col => 5 , p_row => 5, p_sheet => 1, p_fontId => l_font2
+         , p_value => L_CURRENT_MARGIN);
+          INTG_APEX_FILE_XLSX_PKG.cell
+         ( p_col => 5 , p_row =>6, p_sheet => 1, p_fontId => l_font2
+         , p_value =>L_PRIOR_MARGIN);
+          INTG_APEX_FILE_XLSX_PKG.cell
+         ( p_col => 5 , p_row => 7, p_sheet => 1, p_fontId => l_font2
+         , p_value => L_PROJECT_START_DATE);
+          INTG_APEX_FILE_XLSX_PKG.cell
+         ( p_col => 5 , p_row => 8, p_sheet => 1, p_fontId => l_font2
+         , p_value => L_PROJECT_END_DATE);
+          INTG_APEX_FILE_XLSX_PKG.cell
+         ( p_col => 5 , p_row => 9, p_sheet => 1, p_fontId => l_font2
+         , p_value =>L_TOTAL_CURRENT_FORECAST);
+          INTG_APEX_FILE_XLSX_PKG.cell
+         ( p_col => 5 , p_row => 10, p_sheet => 1, p_fontId => l_font2
+         , p_value =>L_TOTAL_PRIOR_FORECAST);
+          INTG_APEX_FILE_XLSX_PKG.cell
+         ( p_col => 5 , p_row => 11, p_sheet => 1, p_fontId => l_font2
+         , p_value =>L_VARIANCE);
+            /*
+      -------------------------------------------------------------
+        LINE DETAILS (Tabular Structure)
+      -------------------------------------------------------------
+      Table Dynamic Headings
+      -------------------------------------------------------------
+      */
+      
+         INTG_APEX_FILE_XLSX_PKG.cell
+         ( p_col => 1 , p_row => 13, p_sheet => 1, p_fontId => l_font3
+         , p_value =>'Version');
+         INTG_APEX_FILE_XLSX_PKG.cell
+         ( p_col => 2 , p_row =>13, p_sheet => 1, p_fontId => l_font3
+         , p_value =>'Task Number'); 
+        for period_cur in ( select per.period_name as period_name
+                                    from pa_projects_all proj
+                                    ,pa_periods_all per
+                                    where 1=1
+                                    and per.end_date>=proj.start_date
+                                    and segment1= p_project_number
+                                    and per.org_id=proj.org_id order by end_date) 
+         loop 
+            
+            INTG_APEX_FILE_XLSX_PKG.cell
+            ( p_col => l_dynamic_col_counter , p_row => 13, p_sheet => 1, p_fontId => l_font3
+             , p_value =>period_cur.period_name);
+            l_dynamic_col_counter :=l_dynamic_col_counter+1; 
+         end loop;                               
+               
+        
+        INTG_APEX_FILE_XLSX_PKG.cell
+         ( p_col => l_dynamic_col_counter , p_row =>13, p_sheet => 1, p_fontId => l_font3
+         , p_value =>'Contingency');
+         l_dynamic_col_counter :=l_dynamic_col_counter+1;
+         INTG_APEX_FILE_XLSX_PKG.cell
+         ( p_col => l_dynamic_col_counter , p_row => 13, p_sheet => 1, p_fontId => l_font3
+         , p_value =>'PMEAC');
+       
+        /*
+      -------------------------------------------------------------
+      Table Dynamic Lines
+      -------------------------------------------------------------
+      */    
+      
+       l_dynamic_row_counter:=14;
+       
+       for data_cur in (SELECT   seq_id, sort, VERSION, c002 task_number,
+         DECODE (sort, 2, NULL, c002) c002, c003, c004, c005, c006, c007,
+         c008, c009, c010, c011, c012, c013, c014, c015, c016, c017, c018,
+         c019, c020, c021, c022, c023, c024, c025, c026, c027, c028, c029,
+         c030, c031, c032, c033, c034, c035, c036, c037, c038, c039, c040
+    FROM (SELECT 1 seq_id, 2 sort, '(variance)' VERSION, cur.c002 c002,
+               TO_CHAR (nvl(cur.c003,0) - nvl(prev.c003,0),'999G999G999G999G990') c003,
+                TO_CHAR (nvl(cur.c004,0) - nvl(prev.c004,0),'999G999G999G999G990') c004,
+                TO_CHAR (nvl(cur.c005,0) - nvl(prev.c005,0),'999G999G999G999G990') c005,
+                TO_CHAR (nvl(cur.c006,0) - nvl(prev.c006,0),'999G999G999G999G990') c006,
+                TO_CHAR (nvl(cur.c007,0) - nvl(prev.c007,0),'999G999G999G999G990') c007,
+                TO_CHAR (nvl(cur.c008,0) - nvl(prev.c008,0),'999G999G999G999G990') c008,
+                TO_CHAR (nvl(cur.c009,0) - nvl(prev.c009,0),'999G999G999G999G990') c009,
+                TO_CHAR (nvl(cur.c010,0) - nvl(prev.c010,0),'999G999G999G999G990') c010,
+                TO_CHAR (nvl(cur.c011,0) - nvl(prev.c011,0),'999G999G999G999G990') c011,
+                TO_CHAR (nvl(cur.c012,0) - nvl(prev.c012,0),'999G999G999G999G990') c012,
+                TO_CHAR (nvl(cur.c013,0) - nvl(prev.c013,0),'999G999G999G999G990') c013,
+                TO_CHAR (nvl(cur.c014,0) - nvl(prev.c014,0),'999G999G999G999G990') c014,
+                TO_CHAR (nvl(cur.c015,0) - nvl(prev.c015,0),'999G999G999G999G990') c015,
+                TO_CHAR (nvl(cur.c016,0) - nvl(prev.c016,0),'999G999G999G999G990') c016,
+                TO_CHAR (nvl(cur.c017,0) - nvl(prev.c017,0),'999G999G999G999G990') c017,
+                TO_CHAR (nvl(cur.c018,0) - nvl(prev.c018,0),'999G999G999G999G990') c018,
+                TO_CHAR (nvl(cur.c019,0) - nvl(prev.c019,0),'999G999G999G999G990') c019,
+                TO_CHAR (nvl(cur.c020,0) - nvl(prev.c020,0),'999G999G999G999G990') c020,
+                TO_CHAR (nvl(cur.c021,0) - nvl(prev.c021,0),'999G999G999G999G990') c021,
+                TO_CHAR (nvl(cur.c022,0) - nvl(prev.c022,0),'999G999G999G999G990') c022,
+                TO_CHAR (nvl(cur.c023,0) - nvl(prev.c023,0),'999G999G999G999G990') c023,
+                TO_CHAR (nvl(cur.c024,0) - nvl(prev.c024,0),'999G999G999G999G990') c024,
+                TO_CHAR (nvl(cur.c025,0) - nvl(prev.c025,0),'999G999G999G999G990') c025,
+                TO_CHAR (nvl(cur.c026,0) - nvl(prev.c026,0),'999G999G999G999G990') c026,
+                TO_CHAR (nvl(cur.c027,0) - nvl(prev.c027,0),'999G999G999G999G990') c027,
+                TO_CHAR (nvl(cur.c028,0) - nvl(prev.c028,0),'999G999G999G999G990') c028,
+                TO_CHAR (nvl(cur.c029,0) - nvl(prev.c029,0),'999G999G999G999G990') c029,
+                TO_CHAR (nvl(cur.c030,0) - nvl(prev.c030,0),'999G999G999G999G990') c030,
+                TO_CHAR (nvl(cur.c031,0) - nvl(prev.c031,0),'999G999G999G999G990') c031,
+                TO_CHAR (nvl(cur.c032,0) - nvl(prev.c032,0),'999G999G999G999G990') c032,
+                TO_CHAR (nvl(cur.c033,0) - nvl(prev.c033,0),'999G999G999G999G990') c033,
+                TO_CHAR (nvl(cur.c034,0) - nvl(prev.c034,0),'999G999G999G999G990') c034,
+                TO_CHAR (nvl(cur.c035,0) - nvl(prev.c035,0),'999G999G999G999G990') c035,
+                TO_CHAR (nvl(cur.c036,0) - nvl(prev.c036,0),'999G999G999G999G990') c036,
+                TO_CHAR (nvl(cur.c037,0) - nvl(prev.c037,0),'999G999G999G999G990') c037,
+                TO_CHAR (nvl(cur.c038,0) - nvl(prev.c038,0),'999G999G999G999G990') c038,
+                TO_CHAR (nvl(cur.c039,0) - nvl(prev.c039,0),'999G999G999G999G990') c039,
+                TO_CHAR (nvl(cur.c040,0) - nvl(prev.c040,0),'999G999G999G999G990') c040
+            FROM (SELECT c001, c002, c003, c004, c005, c006, c007, c008, c009,
+                         c010, c011, c012, c013, c014, c015, c016, c017, c018,
+                         c019, c020, c021, c022, c023, c024, c025, c026, c027,
+                         c028, c029, c030, c031, c032, c033, c034, c035, c036,
+                         c037, c038, c039, c040
+                    FROM apex_collections
+                   WHERE collection_name = 'CUR_VS_PRI_FC_COL'
+                     AND c001 =
+                               apps.intg_common_appl_pkg.get_current_pa_period
+                            || ' Forecast') cur,
+                 (SELECT c001, c002, c003, c004, c005, c006, c007, c008, c009,
+                         c010, c011, c012, c013, c014, c015, c016, c017, c018,
+                         c019, c020, c021, c022, c023, c024, c025, c026, c027,
+                         c028, c029, c030, c031, c032, c033, c034, c035, c036,
+                         c037, c038, c039, c040
+                    FROM apex_collections
+                   WHERE collection_name = 'CUR_VS_PRI_FC_COL'
+                     AND c001 = p_previous_forecast || ' Forecast') prev
+           WHERE cur.c002 = prev.c002
+          UNION ALL
+          SELECT seq_id, 1 sort, c001 VERSION, c002,TO_CHAR (c003,'999G999G999G999G990'), TO_CHAR (c004,'999G999G999G999G990'), TO_CHAR (c005,'999G999G999G999G990'), TO_CHAR (c006,'999G999G999G999G990'), TO_CHAR (c007,'999G999G999G999G990'), TO_CHAR (c008,'999G999G999G999G990'), TO_CHAR (c009,'999G999G999G999G990'),
+                         TO_CHAR (c010,'999G999G999G999G990'), TO_CHAR (c011,'999G999G999G999G990'), TO_CHAR (c012,'999G999G999G999G990'), TO_CHAR (c013,'999G999G999G999G990'), TO_CHAR (c014,'999G999G999G999G990'), TO_CHAR (c015,'999G999G999G999G990'), TO_CHAR (c016,'999G999G999G999G990'), TO_CHAR (c017,'999G999G999G999G990'), TO_CHAR (c018,'999G999G999G999G990'),
+                         TO_CHAR (c019,'999G999G999G999G990'), TO_CHAR (c020,'999G999G999G999G990'), TO_CHAR (c021,'999G999G999G999G990'), TO_CHAR (c022,'999G999G999G999G990'), TO_CHAR (c023,'999G999G999G999G990'), TO_CHAR (c024,'999G999G999G999G990'), TO_CHAR (c025,'999G999G999G999G990'), TO_CHAR (c026,'999G999G999G999G990'), TO_CHAR (c027,'999G999G999G999G990'),
+                         TO_CHAR (c028,'999G999G999G999G990'), TO_CHAR (c029,'999G999G999G999G990'), TO_CHAR (c030,'999G999G999G999G990'), TO_CHAR (c031,'999G999G999G999G990'), TO_CHAR (c032,'999G999G999G999G990'), TO_CHAR (c033,'999G999G999G999G990'), TO_CHAR (c034,'999G999G999G999G990'), TO_CHAR (c035,'999G999G999G999G990'), TO_CHAR (c036,'999G999G999G999G990'),
+                         TO_CHAR (c037,'999G999G999G999G990'), TO_CHAR (c038,'999G999G999G999G990'), TO_CHAR (c039,'999G999G999G999G990'), TO_CHAR (c040,'999G999G999G999G990')
+            FROM apex_collections
+           WHERE collection_name = 'CUR_VS_PRI_FC_COL')
+ORDER BY task_number, sort)
+           loop
+            l_dynamic_col_counter:=1;
+                   
+                         INTG_APEX_FILE_XLSX_PKG.cell
+                         ( p_col => l_dynamic_col_counter , p_row => l_dynamic_row_counter, p_sheet => 1, p_fontId => l_font3
+                         , p_value =>nvl(data_cur.version,'-'));
+                         l_dynamic_col_counter:=l_dynamic_col_counter+1;
+                         
+                         INTG_APEX_FILE_XLSX_PKG.cell
+                         ( p_col => l_dynamic_col_counter , p_row => l_dynamic_row_counter, p_sheet => 1, p_fontId => l_font3
+                         , p_value =>nvl(data_cur.c002,'-'));
+                         l_dynamic_col_counter:=l_dynamic_col_counter+1;
+                         
+                         SELECT count(*) into l_counter
+                         FROM DUAL
+                        WHERE 1 <=
+                                 (select count(*) from ( 
+                        select period_name,'PERIOD'||rownum periodnum 
+                        from
+                        (select proj.start_date,per.period_name 
+                        from pa_projects_all proj
+                        ,pa_periods_all per
+                        where 1=1
+                        and per.end_date>=proj.start_date
+                        and segment1= p_project_number
+                        and per.org_id=proj.org_id order by end_date)
+                        ));
+                        
+                        if l_counter > 0 then 
+                             INTG_APEX_FILE_XLSX_PKG.cell
+                             ( p_col => l_dynamic_col_counter , p_row => l_dynamic_row_counter, p_sheet => 1, p_fontId => l_font3
+                             , p_value =>nvl(data_cur.c003,0));
+                             l_dynamic_col_counter:=l_dynamic_col_counter+1;
+                        end if;
+                        
+                         SELECT count(*) into l_counter
+                         FROM DUAL
+                        WHERE 2 <=
+                                 (select count(*) from ( 
+                        select period_name,'PERIOD'||rownum periodnum 
+                        from
+                        (select proj.start_date,per.period_name 
+                        from pa_projects_all proj
+                        ,pa_periods_all per
+                        where 1=1
+                        and per.end_date>=proj.start_date
+                        and segment1= p_project_number
+                        and per.org_id=proj.org_id order by end_date)
+                        ));
+                        
+                        if l_counter > 0 then 
+                             INTG_APEX_FILE_XLSX_PKG.cell
+                             ( p_col => l_dynamic_col_counter , p_row => l_dynamic_row_counter, p_sheet => 1, p_fontId => l_font3
+                             , p_value =>nvl(data_cur.c004,0));
+                             l_dynamic_col_counter:=l_dynamic_col_counter+1;
+                        end if;
+
+                         SELECT count(*) into l_counter
+                         FROM DUAL
+                        WHERE 3 <=
+                                 (select count(*) from ( 
+                        select period_name,'PERIOD'||rownum periodnum 
+                        from
+                        (select proj.start_date,per.period_name 
+                        from pa_projects_all proj
+                        ,pa_periods_all per
+                        where 1=1
+                        and per.end_date>=proj.start_date
+                        and segment1=p_project_number
+                        and per.org_id=proj.org_id order by end_date)
+                        ));
+                        
+                        if l_counter > 0 then 
+                             INTG_APEX_FILE_XLSX_PKG.cell
+                             ( p_col => l_dynamic_col_counter , p_row => l_dynamic_row_counter, p_sheet => 1, p_fontId => l_font3
+                             , p_value =>nvl(data_cur.c005,0));
+                             l_dynamic_col_counter:=l_dynamic_col_counter+1;
+                        end if;
+
+                         SELECT count(*) into l_counter
+                         FROM DUAL
+                        WHERE 4 <=
+                                 (select count(*) from ( 
+                        select period_name,'PERIOD'||rownum periodnum 
+                        from
+                        (select proj.start_date,per.period_name 
+                        from pa_projects_all proj
+                        ,pa_periods_all per
+                        where 1=1
+                        and per.end_date>=proj.start_date
+                        and segment1=p_project_number
+                        and per.org_id=proj.org_id order by end_date)
+                        ));
+                        
+                        if l_counter > 0 then 
+                             INTG_APEX_FILE_XLSX_PKG.cell
+                             ( p_col => l_dynamic_col_counter , p_row => l_dynamic_row_counter, p_sheet => 1, p_fontId => l_font3
+                             , p_value =>nvl(data_cur.c006,0));
+                             l_dynamic_col_counter:=l_dynamic_col_counter+1;
+                        end if;                        
+
+                         SELECT count(*) into l_counter
+                         FROM DUAL
+                        WHERE 5 <=
+                                 (select count(*) from ( 
+                        select period_name,'PERIOD'||rownum periodnum 
+                        from
+                        (select proj.start_date,per.period_name 
+                        from pa_projects_all proj
+                        ,pa_periods_all per
+                        where 1=1
+                        and per.end_date>=proj.start_date
+                        and segment1=p_project_number
+                        and per.org_id=proj.org_id order by end_date)
+                        ));
+                        
+                        if l_counter > 0 then 
+                             INTG_APEX_FILE_XLSX_PKG.cell
+                             ( p_col => l_dynamic_col_counter , p_row => l_dynamic_row_counter, p_sheet => 1, p_fontId => l_font3
+                             , p_value =>nvl(data_cur.c007,0));
+                             l_dynamic_col_counter:=l_dynamic_col_counter+1;
+                        end if;  
+                        
+                         SELECT count(*) into l_counter
+                         FROM DUAL
+                        WHERE 6 <=
+                                 (select count(*) from ( 
+                        select period_name,'PERIOD'||rownum periodnum 
+                        from
+                        (select proj.start_date,per.period_name 
+                        from pa_projects_all proj
+                        ,pa_periods_all per
+                        where 1=1
+                        and per.end_date>=proj.start_date
+                        and segment1=p_project_number
+                        and per.org_id=proj.org_id order by end_date)
+                        ));
+                        
+                        if l_counter > 0 then 
+                             INTG_APEX_FILE_XLSX_PKG.cell
+                             ( p_col => l_dynamic_col_counter , p_row => l_dynamic_row_counter, p_sheet => 1, p_fontId => l_font3
+                             , p_value =>nvl(data_cur.c008,0));
+                             l_dynamic_col_counter:=l_dynamic_col_counter+1;
+                        end if;    
+
+                         SELECT count(*) into l_counter
+                         FROM DUAL
+                        WHERE 7 <=
+                                 (select count(*) from ( 
+                        select period_name,'PERIOD'||rownum periodnum 
+                        from
+                        (select proj.start_date,per.period_name 
+                        from pa_projects_all proj
+                        ,pa_periods_all per
+                        where 1=1
+                        and per.end_date>=proj.start_date
+                        and segment1=p_project_number
+                        and per.org_id=proj.org_id order by end_date)
+                        ));
+                        
+                        if l_counter > 0 then 
+                             INTG_APEX_FILE_XLSX_PKG.cell
+                             ( p_col => l_dynamic_col_counter , p_row => l_dynamic_row_counter, p_sheet => 1, p_fontId => l_font3
+                             , p_value =>nvl(data_cur.c009,0));
+                             l_dynamic_col_counter:=l_dynamic_col_counter+1;
+                        end if;
+                        
+                         SELECT count(*) into l_counter
+                         FROM DUAL
+                        WHERE 8 <=
+                                 (select count(*) from ( 
+                        select period_name,'PERIOD'||rownum periodnum 
+                        from
+                        (select proj.start_date,per.period_name 
+                        from pa_projects_all proj
+                        ,pa_periods_all per
+                        where 1=1
+                        and per.end_date>=proj.start_date
+                        and segment1=p_project_number
+                        and per.org_id=proj.org_id order by end_date)
+                        ));
+                        
+                        if l_counter > 0 then 
+                             INTG_APEX_FILE_XLSX_PKG.cell
+                             ( p_col => l_dynamic_col_counter , p_row => l_dynamic_row_counter, p_sheet => 1, p_fontId => l_font3
+                             , p_value =>nvl(data_cur.c010,0));
+                             l_dynamic_col_counter:=l_dynamic_col_counter+1;
+                        end if;        
+
+                         SELECT count(*) into l_counter
+                         FROM DUAL
+                        WHERE 9 <=
+                                 (select count(*) from ( 
+                        select period_name,'PERIOD'||rownum periodnum 
+                        from
+                        (select proj.start_date,per.period_name 
+                        from pa_projects_all proj
+                        ,pa_periods_all per
+                        where 1=1
+                        and per.end_date>=proj.start_date
+                        and segment1=p_project_number
+                        and per.org_id=proj.org_id order by end_date)
+                        ));
+                        
+                        if l_counter > 0 then 
+                             INTG_APEX_FILE_XLSX_PKG.cell
+                             ( p_col => l_dynamic_col_counter , p_row => l_dynamic_row_counter, p_sheet => 1, p_fontId => l_font3
+                             , p_value =>nvl(data_cur.c011,0));
+                             l_dynamic_col_counter:=l_dynamic_col_counter+1;
+                        end if;
+                        
+                         SELECT count(*) into l_counter
+                         FROM DUAL
+                        WHERE 10 <=
+                                 (select count(*) from ( 
+                        select period_name,'PERIOD'||rownum periodnum 
+                        from
+                        (select proj.start_date,per.period_name 
+                        from pa_projects_all proj
+                        ,pa_periods_all per
+                        where 1=1
+                        and per.end_date>=proj.start_date
+                        and segment1=p_project_number
+                        and per.org_id=proj.org_id order by end_date)
+                        ));
+                        
+                        if l_counter > 0 then 
+                             INTG_APEX_FILE_XLSX_PKG.cell
+                             ( p_col => l_dynamic_col_counter , p_row => l_dynamic_row_counter, p_sheet => 1, p_fontId => l_font3
+                             , p_value =>nvl(data_cur.c012,0));
+                             l_dynamic_col_counter:=l_dynamic_col_counter+1;
+                        end if;          
+                           
+                        SELECT count(*) into l_counter
+                         FROM DUAL
+                        WHERE 11 <=
+                                 (select count(*) from ( 
+                        select period_name,'PERIOD'||rownum periodnum 
+                        from
+                        (select proj.start_date,per.period_name 
+                        from pa_projects_all proj
+                        ,pa_periods_all per
+                        where 1=1
+                        and per.end_date>=proj.start_date
+                        and segment1=p_project_number
+                        and per.org_id=proj.org_id order by end_date)
+                        ));
+                        
+                        if l_counter > 0 then 
+                             INTG_APEX_FILE_XLSX_PKG.cell
+                             ( p_col => l_dynamic_col_counter , p_row => l_dynamic_row_counter, p_sheet => 1, p_fontId => l_font3
+                             , p_value =>nvl(data_cur.c013,0));
+                             l_dynamic_col_counter:=l_dynamic_col_counter+1;
+                        end if; 
+                       
+                         SELECT count(*) into l_counter
+                         FROM DUAL
+                        WHERE 12 <=
+                                 (select count(*) from ( 
+                        select period_name,'PERIOD'||rownum periodnum 
+                        from
+                        (select proj.start_date,per.period_name 
+                        from pa_projects_all proj
+                        ,pa_periods_all per
+                        where 1=1
+                        and per.end_date>=proj.start_date
+                        and segment1=p_project_number
+                        and per.org_id=proj.org_id order by end_date)
+                        ));
+                        
+                        if l_counter > 0 then 
+                             INTG_APEX_FILE_XLSX_PKG.cell
+                             ( p_col => l_dynamic_col_counter , p_row => l_dynamic_row_counter, p_sheet => 1, p_fontId => l_font3
+                             , p_value =>nvl(data_cur.c014,0));
+                             l_dynamic_col_counter:=l_dynamic_col_counter+1;
+                        end if;          
+                                    
+                        SELECT count(*) into l_counter
+                         FROM DUAL
+                        WHERE 13 <=
+                                 (select count(*) from ( 
+                        select period_name,'PERIOD'||rownum periodnum 
+                        from
+                        (select proj.start_date,per.period_name 
+                        from pa_projects_all proj
+                        ,pa_periods_all per
+                        where 1=1
+                        and per.end_date>=proj.start_date
+                        and segment1=p_project_number
+                        and per.org_id=proj.org_id order by end_date)
+                        ));
+                        
+                        if l_counter > 0 then 
+                             INTG_APEX_FILE_XLSX_PKG.cell
+                             ( p_col => l_dynamic_col_counter , p_row => l_dynamic_row_counter, p_sheet => 1, p_fontId => l_font3
+                             , p_value =>nvl(data_cur.c015,0));
+                             l_dynamic_col_counter:=l_dynamic_col_counter+1;
+                        end if;    
+                        
+                        SELECT count(*) into l_counter
+                         FROM DUAL
+                        WHERE 14 <=
+                                 (select count(*) from ( 
+                        select period_name,'PERIOD'||rownum periodnum 
+                        from
+                        (select proj.start_date,per.period_name 
+                        from pa_projects_all proj
+                        ,pa_periods_all per
+                        where 1=1
+                        and per.end_date>=proj.start_date
+                        and segment1=p_project_number
+                        and per.org_id=proj.org_id order by end_date)
+                        ));
+                        
+                        if l_counter > 0 then 
+                             INTG_APEX_FILE_XLSX_PKG.cell
+                             ( p_col => l_dynamic_col_counter , p_row => l_dynamic_row_counter, p_sheet => 1, p_fontId => l_font3
+                             , p_value =>nvl(data_cur.c016,0));
+                             l_dynamic_col_counter:=l_dynamic_col_counter+1;
+                        end if;
+                        
+                        SELECT count(*) into l_counter
+                         FROM DUAL
+                        WHERE 15 <=
+                                 (select count(*) from ( 
+                        select period_name,'PERIOD'||rownum periodnum 
+                        from
+                        (select proj.start_date,per.period_name 
+                        from pa_projects_all proj
+                        ,pa_periods_all per
+                        where 1=1
+                        and per.end_date>=proj.start_date
+                        and segment1=p_project_number
+                        and per.org_id=proj.org_id order by end_date)
+                        ));
+                        
+                        if l_counter > 0 then 
+                             INTG_APEX_FILE_XLSX_PKG.cell
+                             ( p_col => l_dynamic_col_counter , p_row => l_dynamic_row_counter, p_sheet => 1, p_fontId => l_font3
+                             , p_value =>nvl(data_cur.c017,0));
+                             l_dynamic_col_counter:=l_dynamic_col_counter+1;
+                        end if;
+                        
+                         SELECT count(*) into l_counter
+                         FROM DUAL
+                        WHERE 16 <=
+                                 (select count(*) from ( 
+                        select period_name,'PERIOD'||rownum periodnum 
+                        from
+                        (select proj.start_date,per.period_name 
+                        from pa_projects_all proj
+                        ,pa_periods_all per
+                        where 1=1
+                        and per.end_date>=proj.start_date
+                        and segment1=p_project_number
+                        and per.org_id=proj.org_id order by end_date)
+                        ));
+                        
+                        if l_counter > 0 then 
+                             INTG_APEX_FILE_XLSX_PKG.cell
+                             ( p_col => l_dynamic_col_counter , p_row => l_dynamic_row_counter, p_sheet => 1, p_fontId => l_font3
+                             , p_value =>nvl(data_cur.c018,0));
+                             l_dynamic_col_counter:=l_dynamic_col_counter+1;
+                        end if;
+                           
+                        SELECT count(*) into l_counter
+                         FROM DUAL
+                        WHERE 17 <=
+                                 (select count(*) from ( 
+                        select period_name,'PERIOD'||rownum periodnum 
+                        from
+                        (select proj.start_date,per.period_name 
+                        from pa_projects_all proj
+                        ,pa_periods_all per
+                        where 1=1
+                        and per.end_date>=proj.start_date
+                        and segment1=p_project_number
+                        and per.org_id=proj.org_id order by end_date)
+                        ));
+                        
+                        if l_counter > 0 then 
+                             INTG_APEX_FILE_XLSX_PKG.cell
+                             ( p_col => l_dynamic_col_counter , p_row => l_dynamic_row_counter, p_sheet => 1, p_fontId => l_font3
+                             , p_value =>nvl(data_cur.c019,0));
+                             l_dynamic_col_counter:=l_dynamic_col_counter+1;
+                        end if;  
+                        
+                        SELECT count(*) into l_counter
+                         FROM DUAL
+                        WHERE 18 <=
+                                 (select count(*) from ( 
+                        select period_name,'PERIOD'||rownum periodnum 
+                        from
+                        (select proj.start_date,per.period_name 
+                        from pa_projects_all proj
+                        ,pa_periods_all per
+                        where 1=1
+                        and per.end_date>=proj.start_date
+                        and segment1=p_project_number
+                        and per.org_id=proj.org_id order by end_date)
+                        ));
+                        
+                        if l_counter > 0 then 
+                             INTG_APEX_FILE_XLSX_PKG.cell
+                             ( p_col => l_dynamic_col_counter , p_row => l_dynamic_row_counter, p_sheet => 1, p_fontId => l_font3
+                             , p_value =>nvl(data_cur.c020,0));
+                             l_dynamic_col_counter:=l_dynamic_col_counter+1;
+                        end if;  
+                        
+                        SELECT count(*) into l_counter
+                         FROM DUAL
+                        WHERE 19 <=
+                                 (select count(*) from ( 
+                        select period_name,'PERIOD'||rownum periodnum 
+                        from
+                        (select proj.start_date,per.period_name 
+                        from pa_projects_all proj
+                        ,pa_periods_all per
+                        where 1=1
+                        and per.end_date>=proj.start_date
+                        and segment1=p_project_number
+                        and per.org_id=proj.org_id order by end_date)
+                        ));
+                        
+                        if l_counter > 0 then 
+                             INTG_APEX_FILE_XLSX_PKG.cell
+                             ( p_col => l_dynamic_col_counter , p_row => l_dynamic_row_counter, p_sheet => 1, p_fontId => l_font3
+                             , p_value =>nvl(data_cur.c021,0));
+                             l_dynamic_col_counter:=l_dynamic_col_counter+1;
+                        end if;   
+                        
+                        SELECT count(*) into l_counter
+                         FROM DUAL
+                        WHERE 20 <=
+                                 (select count(*) from ( 
+                        select period_name,'PERIOD'||rownum periodnum 
+                        from
+                        (select proj.start_date,per.period_name 
+                        from pa_projects_all proj
+                        ,pa_periods_all per
+                        where 1=1
+                        and per.end_date>=proj.start_date
+                        and segment1=p_project_number
+                        and per.org_id=proj.org_id order by end_date)
+                        ));
+                        
+                        if l_counter > 0 then 
+                             INTG_APEX_FILE_XLSX_PKG.cell
+                             ( p_col => l_dynamic_col_counter , p_row => l_dynamic_row_counter, p_sheet => 1, p_fontId => l_font3
+                             , p_value =>nvl(data_cur.c022,0));
+                             l_dynamic_col_counter:=l_dynamic_col_counter+1;
+                        end if;     
+                           
+                        SELECT count(*) into l_counter
+                         FROM DUAL
+                        WHERE 21 <=
+                                 (select count(*) from ( 
+                        select period_name,'PERIOD'||rownum periodnum 
+                        from
+                        (select proj.start_date,per.period_name 
+                        from pa_projects_all proj
+                        ,pa_periods_all per
+                        where 1=1
+                        and per.end_date>=proj.start_date
+                        and segment1=p_project_number
+                        and per.org_id=proj.org_id order by end_date)
+                        ));
+                        
+                        if l_counter > 0 then 
+                             INTG_APEX_FILE_XLSX_PKG.cell
+                             ( p_col => l_dynamic_col_counter , p_row => l_dynamic_row_counter, p_sheet => 1, p_fontId => l_font3
+                             , p_value =>nvl(data_cur.c023,0));
+                             l_dynamic_col_counter:=l_dynamic_col_counter+1;
+                        end if;
+                        
+                         SELECT count(*) into l_counter
+                         FROM DUAL
+                        WHERE 22 <=
+                                 (select count(*) from ( 
+                        select period_name,'PERIOD'||rownum periodnum 
+                        from
+                        (select proj.start_date,per.period_name 
+                        from pa_projects_all proj
+                        ,pa_periods_all per
+                        where 1=1
+                        and per.end_date>=proj.start_date
+                        and segment1=p_project_number
+                        and per.org_id=proj.org_id order by end_date)
+                        ));
+                        
+                        if l_counter > 0 then 
+                             INTG_APEX_FILE_XLSX_PKG.cell
+                             ( p_col => l_dynamic_col_counter , p_row => l_dynamic_row_counter, p_sheet => 1, p_fontId => l_font3
+                             , p_value =>nvl(data_cur.c024,0));
+                             l_dynamic_col_counter:=l_dynamic_col_counter+1;
+                        end if;  
+                        
+                        SELECT count(*) into l_counter
+                         FROM DUAL
+                        WHERE 23 <=
+                                 (select count(*) from ( 
+                        select period_name,'PERIOD'||rownum periodnum 
+                        from
+                        (select proj.start_date,per.period_name 
+                        from pa_projects_all proj
+                        ,pa_periods_all per
+                        where 1=1
+                        and per.end_date>=proj.start_date
+                        and segment1=p_project_number
+                        and per.org_id=proj.org_id order by end_date)
+                        ));
+                        
+                        if l_counter > 0 then 
+                             INTG_APEX_FILE_XLSX_PKG.cell
+                             ( p_col => l_dynamic_col_counter , p_row => l_dynamic_row_counter, p_sheet => 1, p_fontId => l_font3
+                             , p_value =>nvl(data_cur.c025,0));
+                             l_dynamic_col_counter:=l_dynamic_col_counter+1;
+                        end if;
+                        
+                        SELECT count(*) into l_counter
+                         FROM DUAL
+                        WHERE 24 <=
+                                 (select count(*) from ( 
+                        select period_name,'PERIOD'||rownum periodnum 
+                        from
+                        (select proj.start_date,per.period_name 
+                        from pa_projects_all proj
+                        ,pa_periods_all per
+                        where 1=1
+                        and per.end_date>=proj.start_date
+                        and segment1=p_project_number
+                        and per.org_id=proj.org_id order by end_date)
+                        ));
+                        
+                        if l_counter > 0 then 
+                             INTG_APEX_FILE_XLSX_PKG.cell
+                             ( p_col => l_dynamic_col_counter , p_row => l_dynamic_row_counter, p_sheet => 1, p_fontId => l_font3
+                             , p_value =>nvl(data_cur.c026,0));
+                             l_dynamic_col_counter:=l_dynamic_col_counter+1;
+                        end if;
+                        
+                         SELECT count(*) into l_counter
+                         FROM DUAL
+                        WHERE 25 <=
+                                 (select count(*) from ( 
+                        select period_name,'PERIOD'||rownum periodnum 
+                        from
+                        (select proj.start_date,per.period_name 
+                        from pa_projects_all proj
+                        ,pa_periods_all per
+                        where 1=1
+                        and per.end_date>=proj.start_date
+                        and segment1=p_project_number
+                        and per.org_id=proj.org_id order by end_date)
+                        ));
+                        
+                        if l_counter > 0 then 
+                             INTG_APEX_FILE_XLSX_PKG.cell
+                             ( p_col => l_dynamic_col_counter , p_row => l_dynamic_row_counter, p_sheet => 1, p_fontId => l_font3
+                             , p_value =>nvl(data_cur.c027,0));
+                             l_dynamic_col_counter:=l_dynamic_col_counter+1;
+                        end if; 
+                        
+                         SELECT count(*) into l_counter
+                         FROM DUAL
+                        WHERE 26 <=
+                                 (select count(*) from ( 
+                        select period_name,'PERIOD'||rownum periodnum 
+                        from
+                        (select proj.start_date,per.period_name 
+                        from pa_projects_all proj
+                        ,pa_periods_all per
+                        where 1=1
+                        and per.end_date>=proj.start_date
+                        and segment1=p_project_number
+                        and per.org_id=proj.org_id order by end_date)
+                        ));
+                        
+                        if l_counter > 0 then 
+                             INTG_APEX_FILE_XLSX_PKG.cell
+                             ( p_col => l_dynamic_col_counter , p_row => l_dynamic_row_counter, p_sheet => 1, p_fontId => l_font3
+                             , p_value =>nvl(data_cur.c028,0));
+                             l_dynamic_col_counter:=l_dynamic_col_counter+1;
+                        end if; 
+                        
+                        SELECT count(*) into l_counter
+                         FROM DUAL
+                        WHERE 27 <=
+                                 (select count(*) from ( 
+                        select period_name,'PERIOD'||rownum periodnum 
+                        from
+                        (select proj.start_date,per.period_name 
+                        from pa_projects_all proj
+                        ,pa_periods_all per
+                        where 1=1
+                        and per.end_date>=proj.start_date
+                        and segment1=p_project_number
+                        and per.org_id=proj.org_id order by end_date)
+                        ));
+                        
+                        if l_counter > 0 then 
+                             INTG_APEX_FILE_XLSX_PKG.cell
+                             ( p_col => l_dynamic_col_counter , p_row => l_dynamic_row_counter, p_sheet => 1, p_fontId => l_font3
+                             , p_value =>nvl(data_cur.c029,0));
+                             l_dynamic_col_counter:=l_dynamic_col_counter+1;
+                        end if; 
+                        
+                        SELECT count(*) into l_counter
+                         FROM DUAL
+                        WHERE 28 <=
+                                 (select count(*) from ( 
+                        select period_name,'PERIOD'||rownum periodnum 
+                        from
+                        (select proj.start_date,per.period_name 
+                        from pa_projects_all proj
+                        ,pa_periods_all per
+                        where 1=1
+                        and per.end_date>=proj.start_date
+                        and segment1=p_project_number
+                        and per.org_id=proj.org_id order by end_date)
+                        ));
+                        
+                        if l_counter > 0 then 
+                             INTG_APEX_FILE_XLSX_PKG.cell
+                             ( p_col => l_dynamic_col_counter , p_row => l_dynamic_row_counter, p_sheet => 1, p_fontId => l_font3
+                             , p_value =>nvl(data_cur.c030,0));
+                             l_dynamic_col_counter:=l_dynamic_col_counter+1;
+                        end if;
+                        
+                        SELECT count(*) into l_counter
+                         FROM DUAL
+                        WHERE 29 <=
+                                 (select count(*) from ( 
+                        select period_name,'PERIOD'||rownum periodnum 
+                        from
+                        (select proj.start_date,per.period_name 
+                        from pa_projects_all proj
+                        ,pa_periods_all per
+                        where 1=1
+                        and per.end_date>=proj.start_date
+                        and segment1=p_project_number
+                        and per.org_id=proj.org_id order by end_date)
+                        ));
+                        
+                        if l_counter > 0 then 
+                             INTG_APEX_FILE_XLSX_PKG.cell
+                             ( p_col => l_dynamic_col_counter , p_row => l_dynamic_row_counter, p_sheet => 1, p_fontId => l_font3
+                             , p_value =>nvl(data_cur.c031,0));
+                             l_dynamic_col_counter:=l_dynamic_col_counter+1;
+                        end if; 
+                        
+                        SELECT count(*) into l_counter
+                         FROM DUAL
+                        WHERE 30 <=
+                                 (select count(*) from ( 
+                        select period_name,'PERIOD'||rownum periodnum 
+                        from
+                        (select proj.start_date,per.period_name 
+                        from pa_projects_all proj
+                        ,pa_periods_all per
+                        where 1=1
+                        and per.end_date>=proj.start_date
+                        and segment1=p_project_number
+                        and per.org_id=proj.org_id order by end_date)
+                        ));
+                        
+                        if l_counter > 0 then 
+                             INTG_APEX_FILE_XLSX_PKG.cell
+                             ( p_col => l_dynamic_col_counter , p_row => l_dynamic_row_counter, p_sheet => 1, p_fontId => l_font3
+                             , p_value =>nvl(data_cur.c032,0));
+                             l_dynamic_col_counter:=l_dynamic_col_counter+1;
+                        end if; 
+                        
+                        SELECT count(*) into l_counter
+                         FROM DUAL
+                        WHERE 31 <=
+                                 (select count(*) from ( 
+                        select period_name,'PERIOD'||rownum periodnum 
+                        from
+                        (select proj.start_date,per.period_name 
+                        from pa_projects_all proj
+                        ,pa_periods_all per
+                        where 1=1
+                        and per.end_date>=proj.start_date
+                        and segment1=p_project_number
+                        and per.org_id=proj.org_id order by end_date)
+                        ));
+                        
+                        if l_counter > 0 then 
+                             INTG_APEX_FILE_XLSX_PKG.cell
+                             ( p_col => l_dynamic_col_counter , p_row => l_dynamic_row_counter, p_sheet => 1, p_fontId => l_font3
+                             , p_value =>nvl(data_cur.c033,0));
+                             l_dynamic_col_counter:=l_dynamic_col_counter+1;
+                        end if;
+                        
+                        SELECT count(*) into l_counter
+                         FROM DUAL
+                        WHERE 32 <=
+                                 (select count(*) from ( 
+                        select period_name,'PERIOD'||rownum periodnum 
+                        from
+                        (select proj.start_date,per.period_name 
+                        from pa_projects_all proj
+                        ,pa_periods_all per
+                        where 1=1
+                        and per.end_date>=proj.start_date
+                        and segment1=p_project_number
+                        and per.org_id=proj.org_id order by end_date)
+                        ));
+                        
+                        if l_counter > 0 then 
+                             INTG_APEX_FILE_XLSX_PKG.cell
+                             ( p_col => l_dynamic_col_counter , p_row => l_dynamic_row_counter, p_sheet => 1, p_fontId => l_font3
+                             , p_value =>nvl(data_cur.c034,0));
+                             l_dynamic_col_counter:=l_dynamic_col_counter+1;
+                        end if;
+                        
+                        SELECT count(*) into l_counter
+                         FROM DUAL
+                        WHERE 33 <=
+                                 (select count(*) from ( 
+                        select period_name,'PERIOD'||rownum periodnum 
+                        from
+                        (select proj.start_date,per.period_name 
+                        from pa_projects_all proj
+                        ,pa_periods_all per
+                        where 1=1
+                        and per.end_date>=proj.start_date
+                        and segment1=p_project_number
+                        and per.org_id=proj.org_id order by end_date)
+                        ));
+                        
+                        if l_counter > 0 then 
+                             INTG_APEX_FILE_XLSX_PKG.cell
+                             ( p_col => l_dynamic_col_counter , p_row => l_dynamic_row_counter, p_sheet => 1, p_fontId => l_font3
+                             , p_value =>nvl(data_cur.c035,0));
+                             l_dynamic_col_counter:=l_dynamic_col_counter+1;
+                        end if;
+                        
+                        SELECT count(*) into l_counter
+                         FROM DUAL
+                        WHERE 34 <=
+                                 (select count(*) from ( 
+                        select period_name,'PERIOD'||rownum periodnum 
+                        from
+                        (select proj.start_date,per.period_name 
+                        from pa_projects_all proj
+                        ,pa_periods_all per
+                        where 1=1
+                        and per.end_date>=proj.start_date
+                        and segment1=p_project_number
+                        and per.org_id=proj.org_id order by end_date)
+                        ));
+                        
+                        if l_counter > 0 then 
+                             INTG_APEX_FILE_XLSX_PKG.cell
+                             ( p_col => l_dynamic_col_counter , p_row => l_dynamic_row_counter, p_sheet => 1, p_fontId => l_font3
+                             , p_value =>nvl(data_cur.c036,0));
+                             l_dynamic_col_counter:=l_dynamic_col_counter+1;
+                        end if;
+                        
+                        SELECT count(*) into l_counter
+                         FROM DUAL
+                        WHERE 35 <=
+                                 (select count(*) from ( 
+                        select period_name,'PERIOD'||rownum periodnum 
+                        from
+                        (select proj.start_date,per.period_name 
+                        from pa_projects_all proj
+                        ,pa_periods_all per
+                        where 1=1
+                        and per.end_date>=proj.start_date
+                        and segment1=p_project_number
+                        and per.org_id=proj.org_id order by end_date)
+                        ));
+                        
+                        if l_counter > 0 then 
+                             INTG_APEX_FILE_XLSX_PKG.cell
+                             ( p_col => l_dynamic_col_counter , p_row => l_dynamic_row_counter, p_sheet => 1, p_fontId => l_font3
+                             , p_value =>nvl(data_cur.c037,0));
+                             l_dynamic_col_counter:=l_dynamic_col_counter+1;
+                        end if;
+                        
+                        SELECT count(*) into l_counter
+                         FROM DUAL
+                        WHERE 36 <=
+                                 (select count(*) from ( 
+                        select period_name,'PERIOD'||rownum periodnum 
+                        from
+                        (select proj.start_date,per.period_name 
+                        from pa_projects_all proj
+                        ,pa_periods_all per
+                        where 1=1
+                        and per.end_date>=proj.start_date
+                        and segment1=p_project_number
+                        and per.org_id=proj.org_id order by end_date)
+                        ));
+                        
+                        if l_counter > 0 then 
+                             INTG_APEX_FILE_XLSX_PKG.cell
+                             ( p_col => l_dynamic_col_counter , p_row => l_dynamic_row_counter, p_sheet => 1, p_fontId => l_font3
+                             , p_value =>nvl(data_cur.c038,0));
+                             l_dynamic_col_counter:=l_dynamic_col_counter+1;
+                        end if;
+                        
+                                                                                                                                                  
+                         INTG_APEX_FILE_XLSX_PKG.cell
+                         ( p_col => l_dynamic_col_counter , p_row => l_dynamic_row_counter, p_sheet => 1, p_fontId => l_font3
+                         , p_value =>nvl(data_cur.c039,0));
+                         l_dynamic_col_counter:=l_dynamic_col_counter+1;
+                          
+                         INTG_APEX_FILE_XLSX_PKG.cell
+                         ( p_col => l_dynamic_col_counter , p_row => l_dynamic_row_counter, p_sheet => 1, p_fontId => l_font3
+                         , p_value =>nvl(data_cur.c040,0));
+                          l_dynamic_col_counter:=l_dynamic_col_counter+1;
+                            
+            l_dynamic_row_counter:=l_dynamic_row_counter+1;
+                
+            
+           end loop; 
+        l_excel := INTG_APEX_FILE_XLSX_PKG.finish;
+      RETURN l_excel;      
+end export_report_excel;
+
+
+/****************************************************************************
+In Apex
+
+Add a Process on page submit
+*****************************************************************************/
+
+DECLARE
+   l_excel BLOB;
+   l_date varchar2(25);
+BEGIN
+   l_excel := apps.INTG_PA_PFW_CUR_VS_PRI_FC_PKG.export_report_excel (p_project_number=>:p25_project,
+                                                                      p_previous_forecast=>:p25_previous_forecast/*,
+                                                                      p_c003_h      => :P25_C03_H,
+                                                                      p_c004_h      => :P25_C04_H,
+                                                                      p_c005_h      => :P25_C05_H,
+                                                                      p_c006_h      => :P25_C06_H,
+                                                                      p_c007_h      => :P25_C07_H,
+                                                                      p_c008_h      => :P25_C08_H,
+                                                                      p_c009_h      => :P25_C09_H,
+                                                                      p_c010_h      => :P25_C10_H,
+                                                                      p_c011_h      => :P25_C11_H,
+                                                                      p_c012_h      => :P25_C12_H,
+                                                                      p_c013_h      => :P25_C13_H,
+                                                                      p_c014_h      => :P25_C14_H,
+                                                                      p_c015_h      => :P25_C15_H,
+                                                                      p_c016_h      => :P25_C16_H,
+                                                                      p_c017_h      => :P25_C17_H,
+                                                                      p_c018_h      => :P25_C18_H,
+                                                                      p_c019_h      => :P25_C19_H,
+                                                                      p_c020_h      => :P25_C20_H,
+                                                                      p_c021_h      => :P25_C21_H,
+                                                                      p_c022_h      => :P25_C22_H,
+                                                                      p_c023_h      => :P25_C23_H,
+                                                                      p_c024_h      => :P25_C24_H,
+                                                                      p_c025_h      => :P25_C25_H,
+                                                                      p_c026_h      => :P25_C26_H,
+                                                                      p_c027_h      => :P25_C27_H,
+                                                                      p_c028_h      => :P25_C28_H,
+                                                                      p_c029_h      => :P25_C29_H,
+                                                                      p_c030_h      => :P25_C30_H,
+                                                                      p_c031_h      => :P25_C31_H,
+                                                                      p_c032_h      => :P25_C32_H,
+                                                                      p_c033_h      => :P25_C33_H,
+                                                                      p_c034_h      => :P25_C34_H,
+                                                                      p_c035_h      => :P25_C35_H,
+                                                                      p_c036_h      => :P25_C36_H,
+                                                                      p_c037_h      => :P25_C37_H,
+                                                                      p_c038_h      => :P25_C38_H*/
+                                                                     );
+    
+    l_date := to_char(sysdate,'DD_MM_YYYY' );
+     
+  -- Prepare Headers
+   owa_util.mime_header('application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',FALSE);
+   htp.p('Content-Length: '||dbms_lob.getlength(l_excel));
+   htp.p( 'Content-Disposition: filename="CUR_VS_PRIOR_REP_' || l_date|| '.xlsx' || '"' );
+   owa_util.http_header_close; 
+
+   wpg_docload.download_file(l_excel);
+
+   apex_application.g_unrecoverable_error := true;
+END;

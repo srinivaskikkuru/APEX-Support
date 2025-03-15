@@ -1,0 +1,52 @@
+Validation for Project Number
+------------------------------------------------
+Step 1:Add a dynamic action of plsql and set a flag item (in this case : P5_PROJ_VALIDATION_FLAG is Affected item)
+------------------------------------------------
+
+Query :
+------------------------------------------------
+declare
+l_count number :=null;
+l_flag varchar2(2):=null;
+begin
+begin
+select count(*) into l_count 
+from INTG_PA_PFW_FC_PROJECTS ippfp,
+pa_projects_all ppa 
+where ippfp.project_id=ppa.project_id
+and ppa.segment1= :PROJECT_NUMBER 
+and PPA.org_id= mo_global.get_current_org_id;
+if l_count > 0 then
+l_flag :='Y';
+else
+l_flag :='N';
+end if;
+exception when others then
+l_flag :='N';
+end; 
+return l_flag;
+end;
+
+Step 2: Add a dynamic action of type Javascript
+------------------------------------------------
+var valFlag=$x('P5_PROJ_VALIDATION_FLAG').value;
+apex.message.clearErrors();
+if (valFlag=='N')
+{
+      $s("PROJECT_NUMBER","");
+    
+    apex.message.showErrors([
+        {
+            type:       "error",
+            location:   [ "page", "inline" ],
+            pageItem:   "PROJECT_NUMBER",
+            message:    "Select a valid Project Number",
+            unsafe:     false
+        }
+    ]);
+}    
+
+
+For converting item data into upper case :
+
+$("#PROJECT_NUMBER").val(($("#PROJECT_NUMBER").val().toUpperCase()).trim());

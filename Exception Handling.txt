@@ -1,0 +1,54 @@
+//Information
+
+ apex.message.showPageSuccess( "Changes saved!" );
+
+//Alert Notification
+apex.message.alert( pMessage, pCallback )
+
+
+apex.message.alert( "Load complete.", function(){
+    afterLoad();
+});
+
+// clear errors
+apex.message.clearErrors()
+
+//Confirmation Messages
+apex.message.confirm( "Are you sure?", function( okPressed ) { 
+    if( okPressed ) {
+        deleteIt();
+    }
+});
+
+
+// Set Theme Hooks
+apex.message.setThemeHooks( 
+    beforeShow: function( pMsgType, pElement$ ){
+        if ( pMsgType === apex.message.TYPE.SUCCESS ) {
+            pElement$.addClass( "animate-msg" );
+        }
+    }, 
+    beforeHide: function( pMsgType, pElement$ ){
+        if ( pMsgType === apex.message.TYPE.SUCCESS ) {
+            pElement$.removeClass( "animate-msg" );
+        }
+    }             
+}); 
+
+
+//Show error messages
+apex.message.showErrors([
+    {
+        type:       "error",
+        location:   [ "page", "inline" ],
+        pageItem:   "P1_ENAME",
+        message:    "Name is required!",
+        unsafe:     false
+    },
+    {
+        type:       "error",
+        location:   "page",
+        message:    "Page error has occurred!",
+        unsafe:     false
+    }
+]);

@@ -1,0 +1,16 @@
+To trigger a button action :
+----------------------------------------------------------
+apex.submit({request:'CLEAR'});
+
+
+
+
+
+
+To Set a Item values : using js expression
+----------------------------------------------------------
+$("#PROJECT_NUMBER").val(($("#PROJECT_NUMBER").val().toUpperCase()).trim());
+
+using PLSQL :
+----------------------------------------------------------
+:PROJECT_NUMBER

@@ -1,0 +1,1 @@
+decode(nvl(dbms_lob.getlength(PICTURE),0),0,NULL, '<img alt="'||ID||'" title="'||id||'" style="border: 4px solid #ccc; -moz-border-radius: 4px; -webkit-border-radius: 4px;"'|| 'src="'|| apex_util.get_blob_file_src('P12_PICTURE',"ROWID")|| '" height="75" width "75" />') "IMAGE"?

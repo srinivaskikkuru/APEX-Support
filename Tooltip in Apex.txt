@@ -1,0 +1,25 @@
+How To make a region as Tooltip in Apex
+
+Create a region with static id : INLINE_DIALOG
+
+Add below code in function and Global declaration
+//showDDDetails is event triggered on mouse enter action
+function showDDDetails(columnName,taskId){
+     var colName=columnName;
+     var tId=taskId;
+     apex.item( "P29_DD_COL_NAME" ).setValue(colName);
+     apex.item( "P29_DD_TASK_ID" ).setValue(taskId);
+     $("#INLINE_DIALOG").show();
+     apex.region("REPORT_REGION").refresh();
+}
+//closeDDDetails is event triggered on mouse out action
+function closeDDDetails(){
+     $("#INLINE_DIALOG").hide();
+}
+$( document ).mousemove(function( event ) {
+     $( "#INLINE_DIALOG" ).position({
+     my: "left+20 top+20",
+     of: event,
+     collision: "fit"
+   });
+});

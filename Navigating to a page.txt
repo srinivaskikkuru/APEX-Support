@@ -1,0 +1,13 @@
+function callMyPopup1 (rspl_number,original_part_number)  {
+      
+    $.colorbox({href:"f?p=&APP_ID.:22:&APP_SESSION.::NO:RP,22:P22_RSPL_NUMBER,P22_PART_NUMBER:" + rspl_number + ',' + original_part_number ,width:"500px", height:"400px", iframe:true});
+     
+}
+
+apex.navigation.redirect('f?p=&APP_ID.:4:&SESSION.::NO::P4_PROJECT,P4_OA_NUMBER:'+$x('P4_PROJECT_1').value+','+$x('P4_OA_NUM_1').value);
+apex.navigation.redirect('f?p=&APP_ID.:15:&SESSION.::NO::P15_OA_ID:'+$x('P4_OA_ID').value);
+apex.navigation.redirect('f?p=&APP_ID.:15:&SESSION.::NO::P15_OA_ID:61967');
+javascript:redirect('f?p=&APP_ID.:3:&SESSION.::NO:::');
+javascript:redirect('f?p=&APP_ID.:15:&SESSION.::NO:::');
+window.open('f?p=&APP_ID.:15:&SESSION.::NO:::');
+<a href="f?p=&APP_ID.:15:&SESSION.::NO::P15_OA_ID:&P4_OA_ID." target="_blank">

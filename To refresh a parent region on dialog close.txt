@@ -1,0 +1,7 @@
+To refresh a parent region on dialog close
+
+Define a dynamic action on item with dialog box based on dialog close -- > (Selection type)Javascript Execution --> (Script) $("ADD_NOTES").click
+
+True action : javascript execution
+
+"apex.region("INTG_EST_COST").refresh();"

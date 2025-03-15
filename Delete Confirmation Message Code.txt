@@ -1,0 +1,79 @@
+------Define a Function in Global Variable-------
+
+function validate_delete() {
+    
+    $('<div id="validationsMsg">').remove();
+    
+    var l_err_message = '';
+    var l_rows_selected = false;
+
+    $("[name=f01]:checked").each(function( index ) {
+        l_rows_selected = true;
+    });
+
+    if (l_rows_selected == false) {
+
+        l_err_message = l_err_message + 'There are no rows selected.<br>';
+
+
+        $('<div id="validationsMsg">' + l_err_message + '</div>').dialog({
+            modal:true,
+            title:"Warning",
+            width:200,            
+            buttons: {
+                Ok: function(){
+                    $(this).dialog('close');
+                }
+            },
+            close: function( event, ui ) { 
+                    $(this).dialog('close');                            
+                }                                        
+        });
+
+    }
+    else {
+
+            l_err_message = l_err_message + 'Are you sure you want to delete the selected rows?<br>';        
+
+        $('<div id="validationsMsg">' + l_err_message + '</div>').dialog({
+            modal:true,
+            title:"Warning",
+            width:450,
+            buttons: {
+                Ok: function(){
+
+                    apex.submit({request:'DELETE'});
+
+                    $(this).dialog('close');
+                },
+                Cancel: function(){
+                    $(this).dialog('close');
+                }               
+            },
+            close: function( event, ui ) { 
+                    $(this).dialog('close');                            
+                }                                        
+        });
+    }
+        
+}
+
+--------------------Delete Button------------------
+Button Name 	: DELETE
+Action 		: Redirect to URL
+Target 		: javascript:validate_delete();
+---------------------------------------------------
+-------------IR Report Settigs------------------------
+Under Check box Column
+Type : Plain Text
+Heading :  <input id="checkAll" type="checkbox">
+
+IMPORTANT POINT : data download time to avoid html tags so fallow below steps-->
+IR Report Column Attributes : 
+Server-Side Condition
+Type  : Request is NOT contained in value
+Value : CSV:HTML:PDF
+--------------------------------------------------- 
+
+
+
