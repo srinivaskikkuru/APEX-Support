@@ -1,5 +1,0 @@
-//ADD BELOW CODE IN GLOBAL FUNCTIONS
-
-$(window).on('beforeunload', function(){
-     if (changesSaved) {
-}});
